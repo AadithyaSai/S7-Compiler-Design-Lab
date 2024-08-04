@@ -118,3 +118,22 @@ void display(int arr[], int n) {
     }
     printf("\n");
 }
+
+/*
+Output
+------
+Enter the number of productions: 6
+Enter the productions: (Enter as A -> aBc)
+E -> E+T
+E -> T
+T -> T*F
+T -> F
+F -> (E)
+F -> i
+First of E: ( i 
+First of T: ( i 
+First of F: ( i 
+Follow of E: $ ) + 
+Follow of T: $ ) * + 
+Follow of F: $ ) * + 
+*/ 
