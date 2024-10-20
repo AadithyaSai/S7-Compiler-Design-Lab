@@ -1,81 +1,77 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-char* E(char *c);
-char* Estar(char *c);
-char* T(char *c);
-char* Tstar(char *c);
-char* F(char *c);
+char* E(char* expr);
+char* Estar(char* expr);
+char* T(char* expr);
+char* Tstar(char* expr);
+char* F(char* expr);
 
 int main() {
-	char str[256];
-	
+    char str[256];
 	printf("Enter string: ");
 	scanf("%s", str);
 	
-	E(str);
-	
-	return 0;
-}
-
-char* E(char *c) {
-	c = T(c);
-	c = Estar(c);
-	if (*(c) == '\0')
+	char* result = E(str);
+	if (*(result) == '\0')
 		printf("Accepted\n");
-  	else {  	
+  	else
   		printf("Syntax error\n");
-  		exit(0);
-  	}
-  	
-  	return c;
 }
 
-char* Estar(char *c) {
-  	if (*(c) == '+' || *(c) == '-') {
-  	    c++;
-  	    c = T(c);
-  	    c = Estar(c);
-  	}
+char* E(char* expr) {
+	expr = T(expr);
+	expr = Estar(expr);
   	
-  	return c;
+  	return expr;
 }
 
-char* T(char *c) {
-	c = F(c);
-	c = Tstar(c);
+char* Estar(char* expr) {
+    if (*expr == '+' ) {
+        expr++;
+    	expr = T(expr);
+	    expr = Estar(expr);
+    }
+    
+    return expr;
+}
+
+char* T(char* expr) {
+    expr = F(expr);
+	expr = Tstar(expr);
 	
-	return c;
+	return expr;
 }
 
-char* Tstar(char *c) {
-  	if (*(c) == '*' || *(c) == '/') {
-  	    c++;
-  	    c = F(c); 
-  	    c = Tstar(c);
-  	}
-  	
-  	return c;
+char* Tstar(char* expr) {
+    if (*expr == '*' ) {
+        expr++;
+    	expr = F(expr);
+	    expr = Tstar(expr);
+    }
+    
+    return expr;
 }
 
-char* F(char *c) {
-  	if (*(c) == '(') {
-  		c++;
-  	    c = E(c);
-  	    if (*(c) == ')')
-  			c++;
-  	    else {
-  	    	printf("Syntax error\n");
-  	    	exit(0);
-  	    }
-  	} else if ('0' <= *(c) && '9' >= *(c)) {	
-  		c++;
+char* F(char* expr) {
+    if (*expr == '(') {
+        expr++;
+        expr = E(expr);
+        if (*expr == ')') {
+            expr++;
+            return expr;
+        }
+        else {
+            printf("Syntax error\n");
+            exit(1);
+        }
+    }
+    else if (*expr >= 'a' && *expr <= 'z')
+        expr++;
+    else {
+        printf("Syntax error\n");
+        exit(1);
+    }
+    return expr;
 }
-  	else {  	
-  		printf("Syntax error\n");
-  		exit(0);
-  	}
-  	
-  	return c;
-}
-
