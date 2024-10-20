@@ -1,138 +1,144 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define KEYWORD_COUNT 6
+#define BUFFER_SIZE 256
 
-char* id[256] = {"printf", "scanf"};
-int id_size = 2;
+// Declare states
+typedef enum {
+    START,
+    COMMENT,
+    SINGLE_COMMENT,
+    MULTI_COMMENT,
+    KEYWORD_ID,
+    STRING,
+    CHAR,
+    NUM
+} State;
 
-int getNextToken(FILE* file, char tok[]);
-int isKeyword(char* str); 
-int isOperator(char c);
-int isSpecial(char c);
-int isDelim(char c);
-void skipLine(FILE* file);
-void addId(char* tok);
-int isId(char* tok);
+// List of keywords for simple keyword recognition
+const char *keywords[] = {
+    "int", "float", "if", "else", "while", "return", "for", "char", "double", "void", NULL
+};
+
+// Function to check if a token is a keyword
+int is_keyword(const char *token) {
+    for (int i = 0; keywords[i] != NULL; i++) {
+        if (strcmp(token, keywords[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 int main() {
-	FILE* input = fopen("source.c", "r");
-	
-	char token[64];
-	char c;
-	while (getNextToken(input, token)) {
-		if (strcmp(token, "//") == 0 || strcmp(token, "#") == 0) {
-			c = fgetc(input);
-			while (c != EOF && c != '\n')
-				c = fgetc(input);
-		} else if (strcmp(token, "/*") == 0) {
-			while (strcmp(token, "*/") != 0)
-				getNextToken(input, token);
-		} else {
-			if (isKeyword(token)) {
-				printf("keyword:\t%s\n", token);
-				if (strcmp(token, "int")== 0) {  // TODO: Add more types	
-					getNextToken(input, token);
-					while (strcmp(token, ";") != 0 && strcmp(token, "(") != 0 && strcmp(token, "=") != 0) {
-						if (strcmp(token, ",") != 0) {
-							addId(token);
-							printf("identifier:\t%s\n", token);	
-						}
-						getNextToken(input, token);			
-					}
-				}
-			} else if (isId(token)) {
-				printf("identifier:\t%s\n", token);	
-			} else if (isOperator(token[0])){
-				printf("operator:\t%s\n", token);	
-			} else if (strcmp(token, "\"") == 0 || (token[0] >= '0' && token[0] <= '9')) {
-				if ((token[0] >= '0' && token[0] <= '9')) {
-					printf("literal:\t%s\n", token);
-				} else {
-					printf("literal:\t%s", token);
-					getNextToken(input, token);
-					while (strcmp(token, "\"") != 0) {
-						printf("%s ", token);
-						getNextToken(input, token);
-					}
-					printf("%s\n", token);
-				}
-			} else {
-				//printf("special:\t%s\n", token);	
-			}
-		}
-	}
-	
-	fclose(input);
-	return 0;
-}
+    FILE *file = fopen("source.c", "r");
 
-int isKeyword(char* str) {
-	static char* keywords[KEYWORD_COUNT] = {"int", "char", "return", "if", "for", "while"};
-	
-	for (int i=0; i < KEYWORD_COUNT; i++) {
-		if (strcmp(keywords[i], str) == 0) {
-			return 1;
-		}
-	}
-	return 0;
-}
+    State state = START;
+    int c;
+    char buffer[BUFFER_SIZE];
+    int idx = 0;
 
-int getNextToken(FILE* file, char tok[]) {
-	int size = 0;
-	
-	char c = fgetc(file);
-	while (c != EOF) {
-		if (size != 0) {
-			if (isDelim(c)) {
-				break;
-			} else if (isOperator(c) || isSpecial(c)) {
-				ungetc(c, file);
-				break;
-			}
-		}
-		if (!isDelim(c)) {		
-			tok[size++] = c;
-		}
-		if (isOperator(c) || isSpecial(c)) {
-			break;
-		}
-		c = fgetc(file);
-	}
-	tok[size] = '\0';
-	
-	if (c == EOF) return 0;
-	return 1;
-}
+    while ((c = fgetc(file)) != EOF) {
+        switch (state) {
+            case COMMENT:
+                if (c == '/') {
+                    state = SINGLE_COMMENT;
+                } else if (c == '*') {
+                    state = MULTI_COMMENT;
+                } else {
+                    ungetc(c, file); // Not a comment, rewind
+                    state = START;
+                }
+                break;
 
-int isOperator(char c) {
-	if (c == '+' || c == '-')  // TODO: Add all ops
-		return 1;
-	return 0;
-}
+            case SINGLE_COMMENT:
+                if (c == '\n') {
+                    state = START;
+                }
+                break;
 
-int isSpecial(char c) {
-	if (c == '(' || c == ')' || c == '"' || c == '#' || c == ';')  // TODO: Add everything
-		return 1;
-	return 0;
-}
+            case MULTI_COMMENT:
+                if (c == '*' && (c = fgetc(file)) == '/') {
+                    state = START;
+                } else if (c == EOF) {
+                    break; // End of file inside a comment
+                }
+                break;
 
-int isDelim(char c) {
-	if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
-		return 1;
-	return 0;
-}
+            case CHAR:
+                if (c != '\'') {
+                    printf("LITERAL(CHR): \t\t%c\n", c);
+                }
+                state = START;
+                break;
 
-void addId(char* tok) {
-	char* new_tok = (char*) malloc(64);
-	strcpy(new_tok,tok);
-	id[id_size++] = new_tok; 
-}
+            case STRING:
+                if (c == '\"') {
+                    buffer[idx] = '\0';
+                    printf("LITERAL(STR): \t\t\"%s\"\n", buffer);
+                    idx = 0;
+                    state = START;
+                } else {
+                    buffer[idx++] = c;
+                }
+                break;
 
-int isId(char* tok) {	
-	for (int i = 0; i < id_size; i++)
-		if (strcmp(id[i], tok) == 0)
-			return 1;
-	return 0;
+            case NUM:
+                if (isdigit(c)) {
+                    buffer[idx++] = c;
+                } else {
+                    buffer[idx] = '\0';
+                    printf("LITERAL(NUM): \t\t%d\n", atoi(buffer));
+                    idx = 0;
+                    ungetc(c, file); // Reprocess this character
+                    state = START;
+                }
+                break;
+
+            case KEYWORD_ID:
+                if (isalnum(c) || c == '_') {
+                    buffer[idx++] = c;
+                } else {
+                    buffer[idx] = '\0';
+                    if (is_keyword(buffer)) {
+                        printf("KEYWORD: \t\t%s\n", buffer);
+                    } else {
+                        printf("IDENTIFIER: \t\t%s\n", buffer);
+                    }
+                    idx = 0;
+                    ungetc(c, file); // Reprocess this character
+                    state = START;
+                }
+                break;
+
+            case START:
+                if (isspace(c)) {
+                    continue; // Ignore whitespace
+                } else if (c == '/') {
+                    state = COMMENT;
+                } else if (c == '#') {  // hacky way to ignore preprocessor directives
+                    state = SINGLE_COMMENT;
+                } else if (isdigit(c)) {
+                    buffer[idx++] = c;
+                    state = NUM;
+                } else if (isalpha(c) || c == '_') {
+                    buffer[idx++] = c;
+                    state = KEYWORD_ID;
+                } else if (c == '\'') {
+                    state = CHAR;
+                } else if (c == '\"') {
+                    state = STRING;
+                } else if (strchr(",+-*/%=", c)) {
+                    printf("OPERATOR: \t\t%c\n", c);
+                } else if (strchr("{}()[];", c)) {
+                    printf("SYMBOL: \t\t%c\n", c);
+                }
+                break;
+        }
+    }
+
+    fclose(file);
+    return 0;
 }
