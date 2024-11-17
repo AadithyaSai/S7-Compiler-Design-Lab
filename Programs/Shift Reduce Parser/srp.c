@@ -34,6 +34,7 @@ void check() {
         if (stack[z] >= 'a' && stack[z] <= 'z') {
         	printf("\n$%s\t%s$\t%s->id", stack, a, ac);
             stack[z] = 'E';
+            check();
         }
     for (z = 0; z < c; z++)
         if (stack[z] == 'E' && stack[z + 1] == '+' && stack[z + 2] == 'E') {
@@ -42,6 +43,7 @@ void check() {
             stack[z + 1] = '\0';
             stack[z + 2] = '\0';
             i = i - 2;
+            check();
         }
     for (z = 0; z < c; z++)
         if (stack[z] == 'E' && stack[z + 1] == '*' && stack[z + 2] == 'E') {
@@ -50,6 +52,7 @@ void check() {
             stack[z + 1] = '\0';
             stack[z + 2] = '\0';
             i = i - 2;
+            check();
         }
     for (z = 0; z < c; z++)
         if (stack[z] == '(' && stack[z + 1] == 'E' && stack[z + 2] == ')') {
@@ -58,5 +61,6 @@ void check() {
             stack[z + 1] = '\0';
             stack[z + 2] = '\0';
             i = i - 2;
+            check();
         }
 }
